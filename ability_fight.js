@@ -1,5 +1,5 @@
 ﻿//□■ <<-- 체력, 경험치 바
-//version Development 1.0.0
+//version Development 1.0.1
 var gameStart = false;
 var tickCount = 0;
 var gameTime = 0;
