@@ -17,9 +17,16 @@ var spawnPoint = new Array();
 var killGoal = 0;
 var abilityCount = 11;
 
+var entityName = ["chicken", "cow", "pig", "sheep", "wolf", "villager", "mooshroom", "squid"];
+
 
 eval(function (p, a, c, k, e, r) { e = function (c) { return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36)) }; if (!''.replace(/^/, String)) { while (c--) r[e(c)] = k[c] || e(c); k = [function (e) { return r[e] }]; e = function () { return '\\w+' }; c = 1 }; while (c--) if (k[c]) p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c]); return p }('D(y(p,a,c,k,e,r){e=y(c){z c.J(a)};A(!\'\'.B(/^/,E)){C(c--)r[e(c)]=k[c]||e(c);k=[y(e){z r[e]}];e=y(){z\'\\\\w+\'};c=1};C(c--)A(k[c])p=p.B(F G(\'\\\\b\'+e(c)+\'\\\\b\',\'g\'),k[c]);z p}(\'j(8(p,a,c,k,e,r){e=d;f(!\\\'\\\'.h(/^/,d)){i(c--)r[c]=k[c]||c;k=[8(e){9 r[e]}];e=8(){9\\\'\\\\\\\\w+\\\'};c=1};i(c--)f(k[c])p=p.h(l m(\\\'\\\\\\\\b\\\'+e(c)+\\\'\\\\\\\\b\\\',\\\'g\\\'),k[c]);9 p}(\\\'0("\\\\\\\\1 2 3\\\\\\\\4 5 6");\\\',7,7,\\\'n|o|q|s|t|u|v\\\'.x(\\\'|\\\'),0,{}))\',H,H,\'||||||||y|z||||E||A||B|C|D||F|G|K|L||M||N|O|P|Q||I\'.I(\'|\'),0,{}))', 53, 53, '||||||||||||||||||||||||||||||||||function|return|if|replace|while|eval|String|new|RegExp|34|split|toString|print|nMade|by|namsic|nAll|rights|reserved'.split('|'), 0, {}))
 
+var x, y, z;
+var sk3T;
+var sk3 = [0, 0];
+var sk3L = [0, 0, 0];
+var sk3C = 0;
 
 function modTick() {
     if (gameStart) {
@@ -46,16 +53,48 @@ function modTick() {
             if (stat[u].cool > 0) stat[u].cool -= 1;
             if (stat[u].cool < 0) stat[u].cool = 0;
 
-            if (stat[u].ab == 1 && stat[u].cool == stat[u].maxCool - 5) {
-                for (var e in userEnt) {
-                    if (userEnt[e] != userEnt[u]) {
-                        if (inRange(userEnt[u], userEnt[e], 3.5)) skillHit(userEnt[u], userEnt[e], 1.2);
+            if (stat[u].ab == 1){       //점멸 후속타
+                if(stat[u].cool == stat[u].maxCool - 5) {
+                    for (var e in userEnt) {
+                        if (userEnt[e] != userEnt[u]) {
+                            if (inRange(userEnt[u], userEnt[e], 3.5)) skillHit(userEnt[u], userEnt[e], 1.2);
+                        }
                     }
+                }
+            }
+            else if (stat[u].ab == 3) {     //자기장
+                if (stat[u].cool > stat[u].maxCool - 60) {      //자기장 파티클
+                    for (var i = 0; i < 2; i++) {
+                        sk3C += 3;
+                        x = sk3L[0] + (Math.cos(Math.PI / 180.0 * sk3C) * 5);
+                        y = sk3L[1];
+                        z = sk3L[2] + (Math.sin(Math.PI / 180.0 * sk3C) * 5);
+                        particle("basic_portal_particle", x, y, z);
+                    }
+                }
+                if(stat[u].cool == stat[u].maxCool - 60) {      //자기장 대상 지정
+                    rangeTellraw(user[u], "자기장 발동!", 20);
+                    sk3[0] = gameTime + 6;
+                    sk3[1] = tickCount;
+                    sk3T = new Array();
+
+                    for (var e in userEnt) {
+                        if (userEnt[e] != userEnt[u]) {
+                            if (inRange_(sk3L[0], sk3L[1], sk3L[2], userEnt[e], 5)) {
+                                sk3T.push(userEnt[e]);
+                                Level.executeCommand("/effect " + user[e] + " levitation 6 0");
+                            }
+                        }
+                    }
+                }
+
+                if (((sk3[0] * 20) + sk3[1]) >= ((gameTime * 20) + tickCount) && (((sk3[0] * 20 + sk3[1]) - ((gameTime * 20) + tickCount)) % 15 == 0)) {        //자기장 데미지
+                    for(var e in sk3T) skillHit(userEnt[u], sk3T[e], 1);
                 }
             }
         }
 
-        if (tickCount % 2 == 0) playerStatUI();        //0.1초마다 실행
+        if (tickCount % 4 == 0) playerStatUI();        //0.2초마다 실행
 
         tickCount++;
 
@@ -75,33 +114,70 @@ function entityAddedHook(entity) {
         var uIdx;
 
         switch (eId) {
-            case 10:        //닭 - 점멸 스킬 사용
-                var uIdx;
-
-                for(var u in user){
-                    if(stat[u].ab == 1) uIdx = u;
+            case 10:        //점멸 스킬 사용
+                for(var u in user) {
+                    if(stat[u].ab == 1) {
+                        uIdx = u;
+                        break;
+                    }
                 }
 
-                Level.executeCommand("/give " + user[uIdx] + " spawn_egg 1 10");
+                Level.executeCommand("/give " + user[uIdx] + " spawn_egg 1 " + eId);
 
-                if (stat[uIdx].cool == 0) {
-                    rangeTellraw(user[uIdx], "점멸!", 15);
+                if(stat[uIdx] != undefined) {
+                    if (stat[uIdx].cool == 0) {
+                        stat[uIdx].cool = stat[uIdx].maxCool;
 
-                    for (var e in userEnt) {
-                        if (userEnt[e] != userEnt[uIdx]) {
-                            if (inRange(userEnt[uIdx], userEnt[e], 3.5)) skillHit(userEnt[uIdx], userEnt[e], 0.8);
+                        rangeTellraw(user[uIdx], "점멸!", 20);
+
+                        for (var e in userEnt) {
+                            if (userEnt[e] != userEnt[uIdx]) {
+                                if (inRange(userEnt[uIdx], userEnt[e], 3)) skillHit(userEnt[uIdx], userEnt[e], 0.8);
+                            }
+                        }
+
+                        rateTp(userEnt[uIdx], entity, entityName[0], 12);
+                    }
+                    else{
+                        if(stat[uIdx].cool != 0){
+                            Level.executeCommand("/tp @e[type=" + entityName[0] + "] 0 -10 0");
+                            tellraw(user[uIdx], "해당 스킬의 쿨타임은 " + (stat[uIdx].cool / 20) + "초 남았습니다");
                         }
                     }
-
-                    rateTp(userEnt[uIdx], entity, 15);
-
-                    stat[uIdx].cool = stat[uIdx].maxCool;
-                }
-                else {
-                    Level.executeCommand("/tp @e[type=chicken] 0 -10 0");
-                    tellraw(user[uIdx], "해당 스킬의 쿨타임은 " + (stat[uIdx].cool / 20) + "초 남았습니다");
                 }
 
+                break;
+
+            case 12:        //자기장 스킬 사용
+                for(var u in user) {
+                    if(stat[u].ab == 3) {
+                        uIdx = u;
+                        break;
+                    }
+                }
+
+                Level.executeCommand("/give " + user[uIdx] + " spawn_egg 1 " + eId);
+
+                if(stat[uIdx] != undefined) {
+                    if(stat[uIdx].cool == 0) {
+                        stat[uIdx].cool = stat[uIdx].maxCool;
+
+                        var location = getRangeLocation(userEnt[uIdx], entity, entityName[2], 10);
+                        sk3L[0] = location[0];
+                        sk3L[1] = Entity.getY(userEnt[uIdx]);
+                        sk3L[2] = location[1];
+
+                        for (var i = 0; i < 10; i++)
+                            particle("magnesium_salts_emitter", sk3L[0], sk3L[1], sk3L[2]);
+                    }
+                    else{
+                        if(stat[uIdx].cool != 0){
+                            Level.executeCommand("/tp @e[type=" + entityName[2] + "] 0 -10 0");
+                            tellraw(user[uIdx], "해당 스킬의 쿨타임은 " + (stat[uIdx].cool / 20) + "초 남았습니다");
+                        }
+                    }
+                }
+                
                 break;
         }
     }
@@ -324,6 +400,10 @@ function procCmd(cmd){
                         stat[idx].lv = num;
                         tellraw(player[0], user[idx] + " 의 레벨 : " + stat[idx].lv);
                     }
+                    else if (Cmd[2] == "cool") {
+                        stat[idx].cool = num;
+                        tellraw(player[0], user[idx] + " 의 쿨타임 : " + stat[idx].cool + "초");
+                    }
                 }
                 else tellraw(player[0], "정확한 이름을 입력해주세요 (입력된 이름 : " + name + ")");
             }
@@ -409,6 +489,17 @@ function attack(a, v) {
         tellraw(user[aIdx], user[vIdx] + "의 현재 체력 : " + stat[vIdx].hp);
         tellraw(user[vIdx], "§4체력 : " + stat[vIdx].hp + "§f");
 
+        if (stat[vIdx].ability == 7) {
+            stat[aIdx].hp -= (damage * 8 / 100).toFixed(0);
+
+            tellraw(user[vIdx], user[aIdx] + "에게 " + damage + "만큼의 반사 데미지를 줬다");
+            tellraw(user[vIdx], user[aIdx] + "의 현재 체력 : " + stat[aIdx].hp);
+            tellraw(user[aIdx], user[vIdx] + "에게 " + damage + "만큼의 반사 데미지를 받았다");
+            tellraw(user[aIdx], "§4체력 : " + stat[aIdx].hp + "§f");
+
+            if (stat[aIdx].hp <= 0) kill(vIdx, aIdx);
+        }
+
         if (stat[vIdx].hp <= 0) kill(aIdx, vIdx);
     }
     else {
@@ -441,16 +532,28 @@ function skillHit(a, v, coe) {
     tellraw(user[aIdx], user[vIdx] + "의 현재 체력 : " + stat[vIdx].hp);
     tellraw(user[vIdx], "§4체력 : " + stat[vIdx].hp + "§f");
 
+    if (stat[vIdx].ability == 7) {
+        stat[aIdx].hp -= (damage * 8 / 100).toFixed(0);
+
+        tellraw(user[vIdx], user[aIdx] + "에게 " + damage + "만큼의 반사 데미지를 줬다");
+        tellraw(user[vIdx], user[aIdx] + "의 현재 체력 : " + stat[aIdx].hp);
+        tellraw(user[aIdx], user[vIdx] + "에게 " + damage + "만큼의 반사 데미지를 받았다");
+        tellraw(user[aIdx], "§4체력 : " + stat[aIdx].hp + "§f");
+
+        if (stat[aIdx].hp <= 0) kill(vIdx, aIdx);
+        else knockBack(a);
+    }
+
     if (stat[vIdx].hp <= 0) kill(aIdx, vIdx);
     else knockBack(v);
 }
 
 function tellraw(target, text) {
-    Level.executeCommand("/tellraw " + target + " {\"rawtext\":[{\"text\":\"" + String(text) + "§f\"}]}");
+    Level.executeCommand("/tellraw " + target + " {\"rawtext\":[{\"text\":\"" + text + "§f\"}]}");
 }
 
 function rangeTellraw(target, text, r) {
-    Level.executeCommand("/execute " + target + " ~ ~ ~ tellraw @a[r=" + r + "] {\"rawtext\":[{\"text\":\"" + String(text) + "§f\"}]}");
+    Level.executeCommand("/execute " + target + " ~ ~ ~ tellraw @a[r=" + r + "] {\"rawtext\":[{\"text\":\"" + text + "§f\"}]}");
 }
 
 function inRange(e1, e2, r) {
@@ -464,28 +567,63 @@ function inRange(e1, e2, r) {
         return false;
 }
 
+function inRange_(x, y, z, e2, r) {
+    var xDis = x - ((Number)(Entity.getX(e2)));
+    var yDis = y - ((Number)(Entity.getY(e2)));
+    var zDis = z - ((Number)(Entity.getZ(e2)));
+
+    if (Math.sqrt(Math.pow(xDis, 2) + Math.pow(yDis, 2) + Math.pow(zDis, 2)) <= r)
+        return true;
+    else
+        return false;
+}
+
+function inLocationRange(e, x, y, z) {
+    var xDis = x - ((Number)(Entity.getX(e2)));
+    var yDis = y - ((Number)(Entity.getY(e2)));
+    var zDis = z - ((Number)(Entity.getZ(e2)));
+
+    if (Math.sqrt(Math.pow(xDis, 2) + Math.pow(yDis, 2) + Math.pow(zDis, 2)) <= r)
+        return true;
+    else
+        return false;
+}
+
 function knockBack(e) {
     Level.executeCommand("/summon snowball " + Entity.getX(e) + " " + Entity.getY(e) + " " + Entity.getZ(e));
 }
 
-function rateTp(playerEnt, targetEnt, distance) {
+function rateTp(playerEnt, targetEnt, targetName, distance) {
+    var location = getRangeLocation(playerEnt, targetEnt, targetName, distance);
+    
+    Level.executeCommand("/tp " + Player.getName(playerEnt) + " " + location[0] + " " + (((Number)(Entity.getY(playerEnt))) + ((Number)(0.5))) + " " + location[1]);
+}
 
+function getRangeLocation(playerEnt, targetEnt, targetName, distance){
     var pX = Entity.getX(playerEnt);
     var pZ = Entity.getZ(playerEnt);
 
-    Level.executeCommand("/execute " + Player.getName(playerEnt) + " ~ ~ ~ tp @e[type=chicken] ^ ^ ^1")
+    Level.executeCommand("/execute " + Player.getName(playerEnt) + " ~ ~ ~ tp @e[type=" + targetName + "] ^ ^ ^1")
 
     var tX = Entity.getX(targetEnt);
     var tZ = Entity.getZ(targetEnt);
 
-    Level.executeCommand("/tp @e[type=chicken] 0 -10 0");
+    Level.executeCommand("/tp @e[type=" + targetName + "] 0 -10 0");
 
     var xAbs = Math.abs(tX - pX);
     var zAbs = Math.abs(tZ - pZ);
     var xRate = (distance / (xAbs + zAbs)) * (tX - pX);
     var zRate = (distance / (xAbs + zAbs)) * (tZ - pZ);
-    
-    Level.executeCommand("/tp " + Player.getName(playerEnt) + " " + (pX + xRate) + " " + (((Number)(Entity.getY(playerEnt))) + ((Number)(0.5))) + " " + (pZ + zRate));
+
+    return [(pX + xRate), (pZ + zRate)];
+}
+
+function particle(particleType, x, y, z){
+    Level.executeCommand("/particle minecraft:" + particleType + " " + x + " " + y + " " + z);
+}
+
+function executeParticle(targetName, particleType, x, y, z){
+    Level.executeCommand("/execute " + targetName, " ~ ~ ~ particle minecraft:" + particleType + " ~" + x + " ~" + y + " ~" + z);
 }
 
 function kill(aIdx, vIdx) {
@@ -526,6 +664,8 @@ function death(u) {
 function revive(u) {
     var random = Math.floor(Math.random() * spawnPointCount);
 
+    stat[u].hp = stat[u].maxHp;
+
     Level.executeCommand("/tp " + user[u] + " " + spawnPoint[random].x + " " + spawnPoint[random].y + " " + spawnPoint[random].z);
 
     Level.executeCommand("/execute " + user[u] + " ~ ~ ~ particle minecraft:totem_particle ~ ~3 ~");
@@ -534,6 +674,8 @@ function revive(u) {
 }
 
 function deathMessage(u) {
+    stat[u].hp = stat[u].maxHp;
+
     Level.executeCommand("/title " + user[u] + " title §0당신은 사망하였습니다...!§f");
     Level.executeCommand("/title " + user[u] + " subtitle 부활까지 " + (stat[u].reviveTime - gameTime) + "초 남았습니다");
 }
@@ -625,9 +767,9 @@ function abilityRoulette() {
             break;
         }
     }
-
+    
     Level.executeCommand("능력 추첨이 완료되었습니다");
-
+    
     return;
 }
 
@@ -702,8 +844,9 @@ function abilitySetting(u, ability) {
             abilityName = "§41대1§f(50초)";
             abilityExplanation = "가장 가까운 한명을 제외하고 모두 30칸 밖으로 순간이동시킨 뒤, 가장 가까운 플레이어에게 구속 버프를 건다";
     }
-
+    
     stat[u].maxCool = ((Number)(maxCooltimeSet)) * 20;
+
     tellraw(name, "능력 : " + abilityName);
     tellraw(name, "설명 : " + abilityExplanation);
     Level.executeCommand("/give " + name + " spawn_egg 1 " + itemDamage);
